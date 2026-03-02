@@ -1,0 +1,223 @@
+Ubuntu Laravel + Blender Setup Guide
+
+This guide is written for Ubuntu (Server or Desktop).  
+It’s meant for Laravel-based projects like:
+
+- BLOXCREATE / BLOXCITY  
+- Laravel Roblox Clone  
+- Vextoria  
+- BrickPlanet  
+
+Repositories you can use:
+
+BLOXCREATE / BLOXCITY  
+https://github.com/RobinShinny/BLOXCREATE-BLOXCITY  
+
+Laravel Roblox Clone  
+https://github.com/foxxosnoot/laravel-roblox-clone  
+
+Vextoria  
+https://github.com/closure-exlosure/Vextoria-Src  
+
+BrickPlanet  
+https://github.com/im-aeo/brickplanet  
+
+Yes, this setup will also work for BrickPlanet.
+
+
+--------------------------------------------------
+1. Installing Blender (System Wide)
+--------------------------------------------------
+
+Blender should never be installed inside /var/www.  
+It should be installed globally so Apache (www-data) can run it properly.
+
+Run this:
+
+cd ~
+sudo apt update
+sudo apt install -y bzip2 wget
+
+sudo apt remove -y blender
+sudo rm -f /usr/bin/blender
+
+wget https://download.blender.org/release/Blender2.79/blender-2.79b-linux-glibc219-x86_64.tar.bz2
+tar -xjf blender-2.79b-linux-glibc219-x86_64.tar.bz2
+
+sudo mv blender-2.79b-linux-glibc219-x86_64 /opt/blender279
+sudo ln -sf /opt/blender279/blender /usr/bin/blender
+
+Now test it:
+
+blender --version
+sudo -u www-data blender --version
+
+If both work, you're good.
+
+Blender should remain in:
+ /opt/blender279
+
+
+--------------------------------------------------
+2. Cloning Your Laravel Project
+--------------------------------------------------
+
+Go into your web directory:
+
+cd /var/www
+
+Clone whichever project you want:
+
+sudo git clone https://github.com/RobinShinny/BLOXCREATE-BLOXCITY bloxcreate
+sudo git clone https://github.com/foxxosnoot/laravel-roblox-clone laravel-roblox-clone
+sudo git clone https://github.com/closure-exlosure/Vextoria-Src vextoria
+sudo git clone https://github.com/im-aeo/brickplanet brickplanet
+
+Then go into the project:
+
+cd /var/www/brickplanet
+(or whichever one you cloned)
+
+
+--------------------------------------------------
+3. Install Laravel Dependencies
+--------------------------------------------------
+
+Inside the project folder:
+
+composer install
+cp .env.example .env
+php artisan key:generate
+
+After that, open the .env file and set your database credentials correctly.
+
+
+--------------------------------------------------
+4. Fix Permissions (Important for Laravel)
+--------------------------------------------------
+
+Laravel only needs write access to:
+
+- storage
+- bootstrap/cache
+
+Run this inside the project folder:
+
+sudo chown -R www-data:www-data .
+sudo chmod -R 775 storage
+sudo chmod -R 775 bootstrap/cache
+
+If your project uses uploads or thumbnails:
+
+cd public
+sudo mkdir -p uploads
+sudo mkdir -p thumbnails
+
+sudo chown -R www-data:www-data uploads
+sudo chown -R www-data:www-data thumbnails
+sudo chmod -R 775 uploads
+sudo chmod -R 775 thumbnails
+
+Then clear Laravel cache:
+
+cd ..
+php artisan config:clear
+php artisan cache:clear
+php artisan view:clear
+
+
+--------------------------------------------------
+5. Apache Configuration (Ubuntu)
+--------------------------------------------------
+
+On Ubuntu, Apache site configs are located at:
+
+/etc/apache2/sites-available/
+
+Most people edit:
+
+/etc/apache2/sites-available/000-default.conf
+
+Open it:
+
+sudo nano /etc/apache2/sites-available/000-default.conf
+
+You can use something like this if you understand what it does:
+
+<VirtualHost *:80>
+    ServerName localhost
+    ServerAdmin webmaster@localhost
+    DocumentRoot /var/www/html/public
+    DirectoryIndex index.php
+
+    <Directory /var/www/html/public>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/laravel_error.log
+    CustomLog ${APACHE_LOG_DIR}/laravel_access.log combined
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName servers.user-aim.xyz
+    DocumentRoot /var/www/html/renderer
+
+    <Directory /var/www/html/renderer>
+        Options FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/renderer_error.log
+    CustomLog ${APACHE_LOG_DIR}/renderer_access.log combined
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName cdn.user-aim.xyz
+    DocumentRoot /var/www/storage
+
+    <Directory /var/www/storage>
+        Options -Indexes +FollowSymLinks
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    <FilesMatch "\.php$">
+        Require all denied
+    </FilesMatch>
+
+    ErrorLog ${APACHE_LOG_DIR}/cdn_error.log
+    CustomLog ${APACHE_LOG_DIR}/cdn_access.log combined
+</VirtualHost>
+
+After editing:
+
+sudo a2enmod rewrite
+sudo systemctl restart apache2
+
+If something breaks, check:
+
+sudo tail -50 /var/log/apache2/error.log
+
+
+--------------------------------------------------
+Important Things to Remember
+--------------------------------------------------
+
+- This is for Ubuntu.
+- It works for BLOXCREATE, BLOXCITY, Vextoria, Laravel Roblox Clone, and BrickPlanet.
+- Apache must point to the project’s /public folder.
+- Only storage and bootstrap/cache need write permissions.
+- Blender must stay in /opt.
+- Keep each Laravel project in its own separate folder.
+- Don’t chmod 777 everything.
+- Don’t blindly copy Apache configs without understanding them.
+
+If everything is set up correctly:
+Laravel will run,
+BrickPlanet will work,
+the renderer will function,
+CDN will serve safely,
+and Blender will execute without permission errors.
