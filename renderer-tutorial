@@ -222,3 +222,19 @@ BrickPlanet will work,
 the renderer will function,
 CDN will serve safely,
 and Blender will execute without permission errors.
+and make sure in the folder like the folder you guys setup if it has render, renderer if it has atleast one of those go to core/config.php change the database to your own then now go to
+/classes/blender.php and remove the 
+    exec(escapeshellcmd("blender --background --python {$tmpFile}"));
+and replace with
+    exec(escapeshellcmd("/usr/bin/blender --background --python {$tmpFile}"));
+
+if it does not have blender says like aeo or something like just replace it with
+    exec(escapeshellcmd("/usr/bin/blender --background --python {$tmpFile}"));
+
+
+
+
+
+
+
+
